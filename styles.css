@@ -1,0 +1,306 @@
+/* Global Reset and Base Styles */
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --primary-color: #00b7af;
+    --dark-bg: #10181f;
+    --card-bg: #1a242d;
+    --card-hover: #212c37;
+    --light-text: #ffffff;
+    --secondary-text: #6a7071;
+    --font-heading: 'Oswald', sans-serif;
+    --font-body: 'Roboto', sans-serif;
+}
+
+body {
+    background-color: var(--dark-bg);
+    color: var(--light-text);
+    font-family: var(--font-body);
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+    overflow: hidden; /* No scrollbars for digital signage */
+}
+
+/* Layout container */
+.app-container {
+    display: flex;
+    flex-direction: column;
+    height: 100%;
+    width: 100%;
+    max-width: 100vw;
+}
+
+/* Header */
+.app-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1rem 2rem;
+    background-color: #0b1116;
+    border-bottom: 2px solid var(--primary-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    z-index: 10;
+}
+
+.logo {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    font-family: var(--font-heading);
+    font-size: 1.8rem;
+    font-weight: 700;
+    letter-spacing: 1px;
+}
+
+.highlight {
+    color: var(--primary-color);
+}
+
+.header-center h1 {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 2px;
+}
+
+.live-indicator {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-weight: 700;
+    font-size: 1.1rem;
+    color: var(--primary-color);
+    font-family: var(--font-heading);
+    letter-spacing: 1px;
+}
+
+.pulse {
+    display: inline-block;
+    width: 12px;
+    height: 12px;
+    background-color: var(--primary-color);
+    border-radius: 50%;
+    box-shadow: 0 0 10px var(--primary-color);
+    animation: pulse-animation 1.5s infinite;
+}
+
+@keyframes pulse-animation {
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 183, 175, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 183, 175, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 183, 175, 0); }
+}
+
+/* Main Scoreboard Grid */
+.scoreboard {
+    flex: 1;
+    padding: 2rem;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    overflow: hidden;
+}
+
+.games-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+    height: 100%;
+    align-content: center;
+    transition: opacity 0.5s ease-in-out;
+}
+
+/* Grid fading for pagination */
+.games-grid.fade-out {
+    opacity: 0;
+}
+
+/* Game Card */
+.game-card {
+    background-color: var(--card-bg);
+    border-radius: 12px;
+    padding: 1.5rem;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
+    border-top: 3px solid transparent;
+    transition: transform 0.2s ease, border-color 0.3s ease;
+}
+
+.game-card.live {
+    border-top-color: var(--primary-color);
+}
+
+.game-card.final {
+    border-top-color: var(--secondary-text);
+}
+
+.game-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--secondary-text);
+    text-transform: uppercase;
+}
+
+.status.live {
+    color: var(--primary-color);
+    font-weight: 700;
+}
+
+.status.final {
+    color: var(--secondary-text);
+}
+
+.status.upcoming {
+    color: #e2e8f0;
+}
+
+/* Team Row */
+.team-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 1rem;
+}
+
+.team-row:last-child {
+    margin-bottom: 0;
+}
+
+.team-info {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.team-logo {
+    width: 50px;
+    height: 50px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.team-logo svg {
+    width: 100%;
+    height: 100%;
+}
+
+.team-name {
+    font-family: var(--font-heading);
+    font-size: 2rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+}
+
+/* Winner styling */
+.game-card.final .team-row.winner .team-name,
+.game-card.final .team-row.winner .team-score {
+    color: var(--light-text);
+}
+
+.game-card.final .team-row.loser .team-name,
+.game-card.final .team-row.loser .team-score {
+    color: var(--secondary-text);
+}
+
+/* Score */
+.team-score {
+    font-family: var(--font-heading);
+    font-size: 3.5rem;
+    font-weight: 700;
+    line-height: 1;
+    text-align: right;
+    width: 80px;
+    transition: color 0.3s ease, transform 0.3s ease;
+}
+
+.team-score.score-changed {
+    color: var(--primary-color);
+    transform: scale(1.1);
+}
+
+/* Ticker Footer */
+.app-footer {
+    height: 50px;
+    background-color: #0b1116;
+    display: flex;
+    align-items: center;
+    border-top: 1px solid #1a242d;
+    overflow: hidden;
+}
+
+.ticker-label {
+    background-color: var(--primary-color);
+    color: var(--dark-bg);
+    font-family: var(--font-heading);
+    font-weight: 700;
+    font-size: 1.1rem;
+    padding: 0 1.5rem;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    text-transform: uppercase;
+    z-index: 2;
+    box-shadow: 2px 0 10px rgba(0,0,0,0.5);
+}
+
+.ticker-wrap {
+    flex: 1;
+    overflow: hidden;
+    white-space: nowrap;
+    position: relative;
+    height: 100%;
+    display: flex;
+    align-items: center;
+}
+
+.ticker-move {
+    display: inline-block;
+    white-space: nowrap;
+    padding-left: 100%;
+    animation: ticker 30s linear infinite;
+}
+
+.ticker-item {
+    display: inline-block;
+    padding: 0 2rem;
+    font-size: 1.1rem;
+    color: var(--light-text);
+    white-space: pre;
+}
+
+.ticker-item span {
+    color: var(--secondary-text);
+    margin-right: 0.5rem;
+}
+
+@keyframes ticker {
+    0% { transform: translate3d(0, 0, 0); }
+    100% { transform: translate3d(-100%, 0, 0); }
+}
+
+/* Responsive adjustments for generic portrait digital signage */
+@media (max-aspect-ratio: 1/1) {
+    .header-center h1 {
+        font-size: 1.2rem;
+    }
+    .team-name {
+        font-size: 1.5rem;
+    }
+    .team-score {
+        font-size: 2.5rem;
+    }
+    .games-grid {
+        grid-template-columns: 1fr;
+    }
+}
