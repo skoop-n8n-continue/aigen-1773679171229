@@ -1,56 +1,91 @@
 // Configuration and Data
 const CONFIG = {
-    SCORE_UPDATE_INTERVAL: 4000, // Update scores every 4 seconds
-    PAGINATION_INTERVAL: 12000,  // Switch pages every 12 seconds
-    ITEMS_PER_PAGE: 6            // Safe number for 1080p displays
+    SCORE_UPDATE_INTERVAL: 15000, // Fetch live data every 15 seconds
+    PAGINATION_INTERVAL: 12000,   // Switch pages every 12 seconds
+    ITEMS_PER_PAGE: 6             // Safe number for 1080p displays
 };
 
-// Team database with realistic colors (Primary and Secondary)
-const TEAMS = {
-    'ATL': { name: 'Atlanta', color1: '#e03a3e', color2: '#26282a' },
-    'BOS': { name: 'Boston', color1: '#007a33', color2: '#ba9653' },
-    'BKN': { name: 'Brooklyn', color1: '#000000', color2: '#ffffff' },
-    'CHI': { name: 'Chicago', color1: '#ce1141', color2: '#000000' },
-    'DAL': { name: 'Dallas', color1: '#00538c', color2: '#b8c4ca' },
-    'DEN': { name: 'Denver', color1: '#0e2240', color2: '#fec524' },
-    'GSW': { name: 'Golden State', color1: '#1d428a', color2: '#ffc72c' },
-    'LAL': { name: 'Los Angeles', color1: '#552583', color2: '#fdb927' },
-    'MIA': { name: 'Miami', color1: '#98002e', color2: '#f9a01b' },
-    'MIL': { name: 'Milwaukee', color1: '#00471b', color2: '#eee1c6' },
-    'NYK': { name: 'New York', color1: '#006bb6', color2: '#f58426' },
-    'PHI': { name: 'Philadelphia', color1: '#006bb6', color2: '#ed174c' },
-    'PHX': { name: 'Phoenix', color1: '#1d1160', color2: '#e56020' },
-    'TOR': { name: 'Toronto', color1: '#ce1141', color2: '#000000' }
-};
-
-// Generate Mock Games
-let games = [
-    { id: 1, home: 'LAL', away: 'BOS', homeScore: 104, awayScore: 102, status: 'LIVE', clock: 'Q4 04:12' },
-    { id: 2, home: 'GSW', away: 'PHX', homeScore: 88, awayScore: 92, status: 'LIVE', clock: 'Q3 01:45' },
-    { id: 3, home: 'MIA', away: 'NYK', homeScore: 45, awayScore: 41, status: 'LIVE', clock: 'Q2 08:30' },
-    { id: 4, home: 'MIL', away: 'CHI', homeScore: 112, awayScore: 98, status: 'FINAL', clock: 'FINAL' },
-    { id: 5, home: 'DAL', away: 'DEN', homeScore: 105, awayScore: 108, status: 'FINAL', clock: 'FINAL' },
-    { id: 6, home: 'PHI', away: 'BKN', homeScore: 115, awayScore: 109, status: 'FINAL', clock: 'FINAL' },
-    { id: 7, home: 'TOR', away: 'ATL', homeScore: 99, awayScore: 105, status: 'FINAL', clock: 'FINAL' }
-];
-
+let games = [];
 let currentPage = 0;
+let lastUpdate = 0;
 
-// Helper: Generate SVG Logo dynamically
-function generateLogoSVG(teamAbbr) {
-    const team = TEAMS[teamAbbr];
-    if (!team) return '';
+// Fetch Live Data from ESPN NBA Scoreboard API
+async function fetchLiveData() {
+    try {
+        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard', {
+            cache: 'no-store'
+        });
 
-    // Fallback text color if both are too dark, but generally color2 works as an accent
-    let textColor = team.color2;
-    if (team.color2 === '#000000' && team.color1 === '#ce1141') textColor = '#ffffff';
+        if (!response.ok) throw new Error('Network response was not ok');
 
-    return `
-        <svg viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">
-            <circle cx="50" cy="50" r="45" fill="${team.color1}" stroke="${team.color2}" stroke-width="5"/>
-            <text x="50" y="65" font-family="Oswald, sans-serif" font-weight="bold" font-size="42" fill="${textColor}" text-anchor="middle">${teamAbbr}</text>
-        </svg>
-    `;
+        const data = await response.json();
+        processApiData(data);
+    } catch (error) {
+        console.error('Error fetching live data:', error);
+        // If error, we keep the existing games array to prevent empty screen
+    }
+}
+
+// Transform ESPN JSON into internal structure
+function processApiData(data) {
+    if (!data || !data.events) return;
+
+    // Process games
+    const newGames = data.events.map(event => {
+        const homeCompetitor = event.competitions[0].competitors.find(c => c.homeAway === 'home');
+        const awayCompetitor = event.competitions[0].competitors.find(c => c.homeAway === 'away');
+
+        // Determine status formatting
+        let statusDisplay = 'SCHEDULED';
+        const state = event.status.type.state; // 'pre', 'in', 'post'
+
+        if (state === 'in') {
+            statusDisplay = 'LIVE';
+        } else if (state === 'post') {
+            statusDisplay = 'FINAL';
+        } else {
+            // pre-game
+            statusDisplay = 'UPCOMING';
+        }
+
+        let clockDisplay = event.status.displayClock;
+        if (state === 'post') {
+            clockDisplay = 'FINAL';
+        } else if (state === 'pre') {
+            // Format start time if available in event.date or just show status description
+            clockDisplay = event.status.type.shortDetail || event.status.type.description;
+        } else if (state === 'in') {
+             // For live games, show Period + Clock
+             const periodDesc = event.status.period > 4 ? `OT${event.status.period - 4}` : `Q${event.status.period}`;
+             clockDisplay = `${periodDesc} ${clockDisplay}`;
+             if (event.status.type.description === 'Halftime') {
+                 clockDisplay = 'HALFTIME';
+             }
+        }
+
+        return {
+            id: event.id,
+            home: homeCompetitor.team.abbreviation,
+            away: awayCompetitor.team.abbreviation,
+            homeLogo: homeCompetitor.team.logo,
+            awayLogo: awayCompetitor.team.logo,
+            homeScore: parseInt(homeCompetitor.score) || 0,
+            awayScore: parseInt(awayCompetitor.score) || 0,
+            status: statusDisplay,
+            clock: clockDisplay,
+            homeWinner: homeCompetitor.winner,
+            awayWinner: awayCompetitor.winner
+        };
+    });
+
+    // Determine if we need to force a re-render
+    const gamesChanged = JSON.stringify(games) !== JSON.stringify(newGames);
+    games = newGames;
+
+    if (gamesChanged && games.length > 0) {
+        // If we just loaded data for the first time, render immediately
+        renderBoard();
+    }
 }
 
 // Render a single game card
@@ -62,39 +97,58 @@ function createGameCard(game) {
     let awayWinnerClass = '';
 
     if (isFinal) {
-        if (game.homeScore > game.awayScore) {
+        if (game.homeWinner) {
             homeWinnerClass = 'winner';
             awayWinnerClass = 'loser';
-        } else {
+        } else if (game.awayWinner) {
             homeWinnerClass = 'loser';
             awayWinnerClass = 'winner';
+        } else {
+             // Fallback if boolean flag isn't set
+            if (game.homeScore > game.awayScore) {
+                homeWinnerClass = 'winner';
+                awayWinnerClass = 'loser';
+            } else if (game.awayScore > game.homeScore) {
+                homeWinnerClass = 'loser';
+                awayWinnerClass = 'winner';
+            }
         }
     }
 
-    const homeLogo = generateLogoSVG(game.home);
-    const awayLogo = generateLogoSVG(game.away);
+    // Default placeholder if logo is missing
+    const defaultLogo = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%23333"/></svg>';
+    const homeLogoUrl = game.homeLogo || defaultLogo;
+    const awayLogoUrl = game.awayLogo || defaultLogo;
+
+    // Pulse effect for live games
+    const liveIndicator = isLive ? '<span class="pulse" style="width:8px;height:8px;margin-right:6px;display:inline-block;"></span>' : '';
+
+    // Status text class
+    let statusClass = 'final';
+    if (isLive) statusClass = 'live';
+    else if (game.status === 'UPCOMING') statusClass = 'upcoming';
 
     return `
         <div class="game-card ${isFinal ? 'final' : ''} ${isLive ? 'live' : ''}" id="game-${game.id}">
             <div class="game-header">
-                <span class="status ${isLive ? 'live' : 'final'}">${isLive ? '<span class="pulse" style="width:8px;height:8px;margin-right:6px;display:inline-block;"></span>' : ''}${game.clock}</span>
-                <span>REGULAR SEASON</span>
+                <span class="status ${statusClass}">${liveIndicator}${game.clock}</span>
+                <span>NBA</span>
             </div>
 
             <div class="team-row ${awayWinnerClass}">
                 <div class="team-info">
-                    <div class="team-logo">${awayLogo}</div>
+                    <div class="team-logo"><img src="${awayLogoUrl}" alt="${game.away} logo" style="width:100%; height:100%; object-fit:contain; border-radius:50%; background:white; padding: 2px;"></div>
                     <div class="team-name">${game.away}</div>
                 </div>
-                <div class="team-score" id="score-away-${game.id}">${game.awayScore}</div>
+                <div class="team-score" id="score-away-${game.id}">${isLive || isFinal ? game.awayScore : '-'}</div>
             </div>
 
             <div class="team-row ${homeWinnerClass}">
                 <div class="team-info">
-                    <div class="team-logo">${homeLogo}</div>
+                    <div class="team-logo"><img src="${homeLogoUrl}" alt="${game.home} logo" style="width:100%; height:100%; object-fit:contain; border-radius:50%; background:white; padding: 2px;"></div>
                     <div class="team-name">${game.home}</div>
                 </div>
-                <div class="team-score" id="score-home-${game.id}">${game.homeScore}</div>
+                <div class="team-score" id="score-home-${game.id}">${isLive || isFinal ? game.homeScore : '-'}</div>
             </div>
         </div>
     `;
@@ -103,6 +157,15 @@ function createGameCard(game) {
 // Render the current page of games
 function renderBoard() {
     const grid = document.getElementById('games-grid');
+    if (!grid || games.length === 0) return;
+
+    // Calculate total pages
+    const totalPages = Math.ceil(games.length / CONFIG.ITEMS_PER_PAGE);
+
+    // Ensure current page is valid (in case games array shrank)
+    if (currentPage >= totalPages) {
+        currentPage = 0;
+    }
 
     // Calculate slice for current page
     const startIdx = currentPage * CONFIG.ITEMS_PER_PAGE;
@@ -119,100 +182,41 @@ function renderBoard() {
     }, 500); // Matches CSS transition duration
 }
 
-// Simulate Live Score Updates
-function simulateLiveUpdates() {
-    let scoreChanged = false;
-
-    games.forEach(game => {
-        if (game.status === 'LIVE') {
-            // Randomly decide if a score happens (30% chance per tick)
-            if (Math.random() < 0.3) {
-                const points = Math.floor(Math.random() * 3) + 1; // 1, 2, or 3 points
-                const isHome = Math.random() > 0.5;
-
-                if (isHome) {
-                    game.homeScore += points;
-                    triggerScoreAnimation(game.id, 'home', game.homeScore);
-                } else {
-                    game.awayScore += points;
-                    triggerScoreAnimation(game.id, 'away', game.awayScore);
-                }
-                scoreChanged = true;
-
-                // Randomly decrement clock slightly
-                const parts = game.clock.split(' ');
-                if (parts.length === 2) {
-                    let [q, time] = parts;
-                    let [min, sec] = time.split(':').map(Number);
-                    sec -= Math.floor(Math.random() * 15);
-                    if (sec < 0) {
-                        min -= 1;
-                        sec += 60;
-                    }
-                    if (min >= 0) {
-                        game.clock = `${q} ${min.toString().padStart(2, '0')}:${sec.toString().padStart(2, '0')}`;
-
-                        // Update clock DOM if it's on screen
-                        const card = document.getElementById(`game-${game.id}`);
-                        if (card) {
-                            const statusEl = card.querySelector('.status');
-                            if (statusEl) {
-                                statusEl.innerHTML = '<span class="pulse" style="width:8px;height:8px;margin-right:6px;display:inline-block;"></span>' + game.clock;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    });
-}
-
-function triggerScoreAnimation(gameId, teamType, newScore) {
-    const elId = `score-${teamType}-${gameId}`;
-    const el = document.getElementById(elId);
-
-    if (el) {
-        el.textContent = newScore;
-        el.classList.add('score-changed');
-
-        // Remove class after animation completes
-        setTimeout(() => {
-            el.classList.remove('score-changed');
-        }, 500);
-    }
-}
-
 // Setup Ticker Tape
 function setupTicker() {
     const tickerContent = document.getElementById('ticker-content');
+    if (!tickerContent) return;
+
     const news = [
-        "<span>BREAKING:</span> Star point guard out 2-4 weeks with ankle sprain",
-        "<span>TRADE RUMORS:</span> Multiple teams inquiring about veteran center",
-        "<span>NIGHTLY RECAP:</span> LAL overcomes 15-point deficit in second half",
-        "<span>LEAGUE LEADERS:</span> GSW currently holds best offensive rating",
-        "<span>UPCOMING:</span> All-Star voting opens next Tuesday",
-        "<span>FINAL:</span> MIL dominates CHI 112-98 behind 35-point performance"
+        "<span>ESPN:</span> Fetching live scores direct from API",
+        "<span>NBA ACTION:</span> Stay tuned for live updates and recent final scores",
+        "<span>NOTICE:</span> Application uses real-time data integration",
+        "<span>SPORTSCORE:</span> Digital signage system online"
     ];
 
     // Duplicate news to ensure smooth infinite scrolling
-    const fullNews = [...news, ...news].join('     |     ');
+    const fullNews = [...news, ...news, ...news].join('     |     ');
     tickerContent.innerHTML = `<span class="ticker-item">${fullNews}</span>`;
 }
 
 // Main Initialization
 function init() {
     setupTicker();
-    renderBoard();
 
-    // Start Live Update Simulation loop
-    setInterval(simulateLiveUpdates, CONFIG.SCORE_UPDATE_INTERVAL);
+    // Fetch initial data immediately
+    fetchLiveData();
+
+    // Start Live Update polling loop
+    setInterval(fetchLiveData, CONFIG.SCORE_UPDATE_INTERVAL);
 
     // Start Pagination loop
     setInterval(() => {
-        const totalPages = Math.ceil(games.length / CONFIG.ITEMS_PER_PAGE);
-        if (totalPages > 1) {
-            currentPage = (currentPage + 1) % totalPages;
-            renderBoard();
+        if (games.length > 0) {
+            const totalPages = Math.ceil(games.length / CONFIG.ITEMS_PER_PAGE);
+            if (totalPages > 1) {
+                currentPage = (currentPage + 1) % totalPages;
+                renderBoard();
+            }
         }
     }, CONFIG.PAGINATION_INTERVAL);
 }
