@@ -322,24 +322,38 @@ function renderBoard() {
 }
 
 // Setup Ticker Tape
-function setupTicker() {
+async function fetchLiveNews() {
+    try {
+        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/news', {
+            cache: 'no-store'
+        });
+
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const data = await response.json();
+        if (data && data.articles && data.articles.length > 0) {
+            updateTicker(data.articles);
+        }
+    } catch (error) {
+        console.error('Error fetching live news:', error);
+    }
+}
+
+function updateTicker(articles) {
     const tickerContent = document.getElementById('ticker-content');
     if (!tickerContent) return;
 
-    const news = [
-        "<span>ESPN:</span> Fetching live scores direct from API",
-        "<span>NBA ACTION:</span> Stay tuned for live updates and recent final scores",
-        "<span>NOTICE:</span> Application uses real-time data integration",
-        "<span>SPORTSCORE:</span> Digital signage system online"
-    ];
+    // Extract headlines and format them
+    const news = articles.map(article => `<span>NBA NEWS:</span> ${article.headline}`);
 
+    // Duplicate to ensure smooth infinite scrolling
     const fullNews = [...news, ...news, ...news].join('     |     ');
-    tickerContent.innerHTML = `<span class="ticker-item">${fullNews}</span>`;
+    tickerContent.innerHTML = `<span class="ticker-item">${fullNews}     |     </span>`;
 }
 
 // Main Initialization
 function init() {
-    setupTicker();
+    fetchLiveNews();
 
     // Initial calculation of layout
     calculateItemsPerPage();
@@ -349,6 +363,9 @@ function init() {
 
     // Start Live Update polling loop
     updateTimer = setInterval(fetchLiveData, CONFIG.SCORE_UPDATE_INTERVAL);
+
+    // Start Live News polling loop (every 5 minutes)
+    setInterval(fetchLiveNews, 300000);
 
     // Start Pagination loop
     paginationTimer = setInterval(() => {
