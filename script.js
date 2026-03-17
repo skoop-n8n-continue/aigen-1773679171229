@@ -2,12 +2,55 @@
 const CONFIG = {
     SCORE_UPDATE_INTERVAL: 15000, // Fetch live data every 15 seconds
     PAGINATION_INTERVAL: 12000,   // Switch pages every 12 seconds
-    ITEMS_PER_PAGE: 6             // Safe number for 1080p displays
+    ITEMS_PER_PAGE: 6             // Dynamically calculated based on screen size
 };
 
 let games = [];
 let currentPage = 0;
-let lastUpdate = 0;
+let paginationTimer = null;
+let updateTimer = null;
+
+// Calculate how many items fit in the grid to avoid cut-offs
+function calculateItemsPerPage() {
+    const grid = document.getElementById('games-grid');
+    if (!grid) return;
+
+    // Get actual computed gap (fallback to 24px)
+    const computedStyle = window.getComputedStyle(grid);
+    const gap = parseFloat(computedStyle.gap) || 24;
+
+    const gridWidth = grid.clientWidth;
+    const gridHeight = grid.clientHeight;
+
+    // Min card dimensions based on our CSS design
+    const cardMinWidth = 320;
+    const cardMinHeight = 200; // Increased to ensure no vertical clipping
+
+    let cols = Math.floor((gridWidth + gap) / (cardMinWidth + gap));
+    if (cols < 1) cols = 1;
+
+    let rows = Math.floor((gridHeight + gap) / (cardMinHeight + gap));
+    if (rows < 1) rows = 1;
+
+    const newItemsPerPage = cols * rows;
+
+    if (CONFIG.ITEMS_PER_PAGE !== newItemsPerPage) {
+        CONFIG.ITEMS_PER_PAGE = newItemsPerPage;
+        currentPage = 0; // Reset page to avoid out of bounds
+
+        // If we already have games, re-render the board immediately
+        if (games.length > 0) {
+            renderBoard();
+        }
+    }
+}
+
+// Handle window resizing to recalculate capacity
+window.addEventListener('resize', () => {
+    // Debounce resize
+    clearTimeout(window.resizeTimer);
+    window.resizeTimer = setTimeout(calculateItemsPerPage, 250);
+});
 
 // Fetch Live Data from ESPN NBA Scoreboard API
 async function fetchLiveData() {
@@ -78,17 +121,118 @@ function processApiData(data) {
         };
     });
 
-    // Determine if we need to force a re-render
-    const gamesChanged = JSON.stringify(games) !== JSON.stringify(newGames);
+    const isFirstLoad = games.length === 0;
     games = newGames;
 
-    if (gamesChanged && games.length > 0) {
-        // If we just loaded data for the first time, render immediately
+    if (isFirstLoad) {
+        renderBoard();
+    } else {
+        updateDOMInPlace();
+    }
+}
+
+// Update existing DOM elements to avoid full re-render flashes
+function updateDOMInPlace() {
+    const grid = document.getElementById('games-grid');
+    if (!grid) return;
+
+    const startIdx = currentPage * CONFIG.ITEMS_PER_PAGE;
+    const endIdx = startIdx + CONFIG.ITEMS_PER_PAGE;
+    const currentGames = games.slice(startIdx, endIdx);
+
+    let needsFullRender = false;
+
+    for (const game of currentGames) {
+        const gameEl = document.getElementById(`game-${game.id}`);
+
+        // If the card doesn't exist on the screen, the DOM is out of sync. Full render needed.
+        if (!gameEl) {
+            needsFullRender = true;
+            break;
+        }
+
+        // Update clock & status
+        const clockEl = gameEl.querySelector('.status');
+        if (clockEl) {
+            // strip out pulse element to compare just text
+            let currentText = clockEl.innerText.trim();
+            if (currentText !== game.clock) {
+
+                let statusClass = 'final';
+                if (game.status === 'LIVE') statusClass = 'live';
+                else if (game.status === 'UPCOMING') statusClass = 'upcoming';
+
+                clockEl.className = `status ${statusClass}`;
+
+                if (game.status === 'LIVE') {
+                    clockEl.innerHTML = '<span class="pulse" style="width:8px;height:8px;margin-right:6px;display:inline-block;"></span>' + game.clock;
+                    gameEl.classList.add('live');
+                    gameEl.classList.remove('final');
+                } else if (game.status === 'FINAL') {
+                    clockEl.innerHTML = game.clock;
+                    gameEl.classList.add('final');
+                    gameEl.classList.remove('live');
+
+                    // Update winner styling if it just ended
+                    updateWinnerStyling(gameEl, game);
+                } else {
+                    clockEl.innerHTML = game.clock;
+                    gameEl.classList.remove('live', 'final');
+                }
+            }
+        }
+
+        // Update scores dynamically
+        const homeScoreEl = document.getElementById(`score-home-${game.id}`);
+        const awayScoreEl = document.getElementById(`score-away-${game.id}`);
+
+        if (homeScoreEl && parseInt(homeScoreEl.innerText) !== game.homeScore && (game.status === 'LIVE' || game.status === 'FINAL')) {
+            homeScoreEl.innerText = game.homeScore;
+            homeScoreEl.classList.add('score-changed');
+            setTimeout(() => homeScoreEl.classList.remove('score-changed'), 1000);
+        }
+
+        if (awayScoreEl && parseInt(awayScoreEl.innerText) !== game.awayScore && (game.status === 'LIVE' || game.status === 'FINAL')) {
+            awayScoreEl.innerText = game.awayScore;
+            awayScoreEl.classList.add('score-changed');
+            setTimeout(() => awayScoreEl.classList.remove('score-changed'), 1000);
+        }
+    }
+
+    if (needsFullRender) {
         renderBoard();
     }
 }
 
-// Render a single game card
+// Update winning/losing team classes
+function updateWinnerStyling(gameEl, game) {
+    let homeWinnerClass = '';
+    let awayWinnerClass = '';
+
+    if (game.homeWinner) {
+        homeWinnerClass = 'winner';
+        awayWinnerClass = 'loser';
+    } else if (game.awayWinner) {
+        homeWinnerClass = 'loser';
+        awayWinnerClass = 'winner';
+    } else {
+        if (game.homeScore > game.awayScore) {
+            homeWinnerClass = 'winner';
+            awayWinnerClass = 'loser';
+        } else if (game.awayScore > game.homeScore) {
+            homeWinnerClass = 'loser';
+            awayWinnerClass = 'winner';
+        }
+    }
+
+    const rows = gameEl.querySelectorAll('.team-row');
+    if (rows.length === 2) {
+        rows[0].className = `team-row ${awayWinnerClass}`;
+        rows[1].className = `team-row ${homeWinnerClass}`;
+    }
+}
+
+// Render a single game card (Full HTML generation)
 function createGameCard(game) {
     const isFinal = game.status === 'FINAL';
     const isLive = game.status === 'LIVE';
@@ -104,7 +248,6 @@ function createGameCard(game) {
             homeWinnerClass = 'loser';
             awayWinnerClass = 'winner';
         } else {
-             // Fallback if boolean flag isn't set
             if (game.homeScore > game.awayScore) {
                 homeWinnerClass = 'winner';
                 awayWinnerClass = 'loser';
@@ -115,15 +258,12 @@ function createGameCard(game) {
         }
     }
 
-    // Default placeholder if logo is missing
     const defaultLogo = 'data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 100"><circle cx="50" cy="50" r="45" fill="%23333"/></svg>';
     const homeLogoUrl = game.homeLogo || defaultLogo;
     const awayLogoUrl = game.awayLogo || defaultLogo;
 
-    // Pulse effect for live games
     const liveIndicator = isLive ? '<span class="pulse" style="width:8px;height:8px;margin-right:6px;display:inline-block;"></span>' : '';
 
-    // Status text class
     let statusClass = 'final';
     if (isLive) statusClass = 'live';
     else if (game.status === 'UPCOMING') statusClass = 'upcoming';
@@ -167,7 +307,6 @@ function renderBoard() {
         currentPage = 0;
     }
 
-    // Calculate slice for current page
     const startIdx = currentPage * CONFIG.ITEMS_PER_PAGE;
     const endIdx = startIdx + CONFIG.ITEMS_PER_PAGE;
     const currentGames = games.slice(startIdx, endIdx);
@@ -194,7 +333,6 @@ function setupTicker() {
         "<span>SPORTSCORE:</span> Digital signage system online"
     ];
 
-    // Duplicate news to ensure smooth infinite scrolling
     const fullNews = [...news, ...news, ...news].join('     |     ');
     tickerContent.innerHTML = `<span class="ticker-item">${fullNews}</span>`;
 }
@@ -203,19 +341,22 @@ function setupTicker() {
 function init() {
     setupTicker();
 
+    // Initial calculation of layout
+    calculateItemsPerPage();
+
     // Fetch initial data immediately
     fetchLiveData();
 
     // Start Live Update polling loop
-    setInterval(fetchLiveData, CONFIG.SCORE_UPDATE_INTERVAL);
+    updateTimer = setInterval(fetchLiveData, CONFIG.SCORE_UPDATE_INTERVAL);
 
     // Start Pagination loop
-    setInterval(() => {
+    paginationTimer = setInterval(() => {
         if (games.length > 0) {
             const totalPages = Math.ceil(games.length / CONFIG.ITEMS_PER_PAGE);
             if (totalPages > 1) {
                 currentPage = (currentPage + 1) % totalPages;
-                renderBoard();
+                renderBoard(); // Full render is needed for pagination
             }
         }
     }, CONFIG.PAGINATION_INTERVAL);

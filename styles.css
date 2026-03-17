@@ -108,10 +108,11 @@ body {
 
 .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
-    gap: 2rem;
+    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
+    gap: 1.5rem;
     height: 100%;
     align-content: center;
+    justify-content: center;
     transition: opacity 0.5s ease-in-out;
 }
 
@@ -124,12 +125,14 @@ body {
 .game-card {
     background-color: var(--card-bg);
     border-radius: 12px;
-    padding: 1.5rem;
+    padding: 1.25rem;
     display: flex;
     flex-direction: column;
+    justify-content: space-between;
     box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
     border-top: 3px solid transparent;
     transition: transform 0.2s ease, border-color 0.3s ease;
+    min-height: 180px;
 }
 
 .game-card.live {
@@ -299,8 +302,5 @@ body {
     }
     .team-score {
         font-size: 2.5rem;
-    }
-    .games-grid {
-        grid-template-columns: 1fr;
     }
 }
