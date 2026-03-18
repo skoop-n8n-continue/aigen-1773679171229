@@ -280,26 +280,11 @@ body {
     font-size: 1.1rem;
     color: var(--light-text);
     white-space: pre;
-    font-family: var(--font-heading);
 }
 
-.ticker-item .symbol {
-    color: var(--primary-color);
+.ticker-item span {
+    color: var(--secondary-text);
     margin-right: 0.5rem;
-    font-weight: 600;
-}
-
-.ticker-item .price {
-    color: var(--light-text);
-    margin-right: 0.5rem;
-}
-
-.ticker-item .positive-change {
-    color: #00ff88;
-}
-
-.ticker-item .negative-change {
-    color: #ff3366;
 }
 
 @keyframes ticker {
