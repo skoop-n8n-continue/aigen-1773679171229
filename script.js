@@ -22,11 +22,12 @@ function calculateItemsPerPage() {
     const gridWidth = grid.clientWidth;
     const gridHeight = grid.clientHeight;
 
-    // Min card dimensions based on our CSS design
-    const cardMinWidth = 400;
-    const cardMinHeight = 280; // Increased for larger fonts
+    // Min card dimensions based on our new single-column design
+    const cardMinWidth = 500;
+    const cardMinHeight = 260;
 
-    let cols = 1; // Forced to 1 column as per requirements
+    // Force single column as per layout requirements
+    let cols = 1;
 
     let rows = Math.floor((gridHeight + gap) / (cardMinHeight + gap));
     if (rows < 1) rows = 1;
