@@ -321,82 +321,51 @@ function renderBoard() {
     }, 500); // Matches CSS transition duration
 }
 
-// Setup Ticker Tape (Stock Ticker)
-let stocks = [
-    { symbol: 'AAPL', price: 232.14, change: 1.45, percent: 0.63 },
-    { symbol: 'MSFT', price: 412.56, change: -2.31, percent: -0.56 },
-    { symbol: 'GOOGL', price: 184.22, change: 0.88, percent: 0.48 },
-    { symbol: 'AMZN', price: 198.75, change: 3.12, percent: 1.59 },
-    { symbol: 'NVDA', price: 135.21, change: 4.15, percent: 3.17 },
-    { symbol: 'TSLA', price: 258.44, change: -5.62, percent: -2.12 },
-    { symbol: 'META', price: 562.18, change: 7.42, percent: 1.34 },
-    { symbol: 'NFLX', price: 712.33, change: -1.25, percent: -0.18 },
-    { symbol: 'BRK.B', price: 452.12, change: 0.95, percent: 0.21 },
-    { symbol: 'V', price: 284.55, change: -0.42, percent: -0.15 },
-    { symbol: 'BTC/USD', price: 92451.22, change: 1242.55, percent: 1.36 }
-];
-
-async function fetchStockData() {
+// Setup Ticker Tape
+async function fetchLiveNews() {
     try {
-        // Simulate real-time market movement with small fluctuations
-        stocks = stocks.map(stock => {
-            const volatility = 0.001; // 0.1% max move per update
-            const change = (Math.random() - 0.48) * stock.price * volatility; // Slight upward bias
-            const newPrice = stock.price + change;
-            const newChange = stock.change + change;
-            const newPercent = (newChange / (newPrice - newChange)) * 100;
-
-            return {
-                ...stock,
-                price: newPrice,
-                change: newChange,
-                percent: newPercent
-            };
+        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/news', {
+            cache: 'no-store'
         });
 
-        updateTicker();
+        if (!response.ok) throw new Error('Network response was not ok');
+
+        const data = await response.json();
+        if (data && data.articles && data.articles.length > 0) {
+            updateTicker(data.articles);
+        }
     } catch (error) {
-        console.error('Error updating stock data:', error);
+        console.error('Error fetching live news:', error);
     }
 }
 
-function updateTicker() {
+function updateTicker(articles) {
     const tickerContent = document.getElementById('ticker-content');
     if (!tickerContent) return;
 
-    // Format stock items
-    const stockItems = stocks.map(stock => {
-        const isUp = stock.percent >= 0;
-        const colorClass = isUp ? 'stock-up' : 'stock-down';
-        const sign = isUp ? '+' : '';
-        const arrow = isUp ? '▲' : '▼';
+    // Extract headlines and format them
+    const news = articles.map(article => `<span>NBA NEWS:</span> ${article.headline}`);
 
-        return `<span class="stock-item">
-            <span class="stock-symbol">${stock.symbol}</span>
-            <span class="stock-price">${stock.price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
-            <span class="stock-change ${colorClass}">${arrow} ${sign}${stock.percent.toFixed(2)}%</span>
-        </span>`;
-    });
-
-    // Duplicate for smooth infinite scrolling
-    const fullTicker = [...stockItems, ...stockItems].join('<span class="ticker-separator">     |     </span>');
-    tickerContent.innerHTML = `<span class="ticker-item">${fullTicker}     |     </span>`;
+    // Duplicate to ensure smooth infinite scrolling
+    const fullNews = [...news, ...news, ...news].join('     |     ');
+    tickerContent.innerHTML = `<span class="ticker-item">${fullNews}     |     </span>`;
 }
 
 // Main Initialization
 function init() {
+    fetchLiveNews();
+
     // Initial calculation of layout
     calculateItemsPerPage();
 
-    // Initial data fetch
+    // Fetch initial data immediately
     fetchLiveData();
-    fetchStockData();
 
     // Start Live Update polling loop
     updateTimer = setInterval(fetchLiveData, CONFIG.SCORE_UPDATE_INTERVAL);
 
-    // Start Stock polling loop (every 5 seconds for a "live" feel)
-    setInterval(fetchStockData, 5000);
+    // Start Live News polling loop (every 5 minutes)
+    setInterval(fetchLiveNews, 300000);
 
     // Start Pagination loop
     paginationTimer = setInterval(() => {
