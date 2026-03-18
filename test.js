@@ -1,0 +1,22 @@
+const STOCKS = [
+    { symbol: 'AAPL', price: 173.50, change: 1.2 },
+    { symbol: 'MSFT', price: 420.55, change: 0.8 },
+    { symbol: 'GOOGL', price: 142.65, change: -0.5 },
+    { symbol: 'AMZN', price: 175.35, change: 2.1 },
+    { symbol: 'NVDA', price: 880.08, change: 3.5 },
+    { symbol: 'META', price: 505.40, change: 0.2 },
+    { symbol: 'TSLA', price: 175.22, change: -1.5 },
+    { symbol: 'BRK.B', price: 410.25, change: 0.1 },
+    { symbol: 'LLY', price: 775.00, change: 1.8 },
+    { symbol: 'V', price: 285.50, change: -0.3 },
+    { symbol: 'JPM', price: 195.20, change: 0.5 },
+    { symbol: 'WMT', price: 60.50, change: 0.4 },
+    { symbol: 'MA', price: 480.10, change: -0.2 },
+    { symbol: 'PG', price: 160.30, change: 0.1 },
+    { symbol: 'UNH', price: 490.50, change: -1.2 },
+    { symbol: 'JNJ', price: 155.80, change: 0.3 },
+    { symbol: 'HD', price: 380.20, change: 0.6 },
+    { symbol: 'BAC', price: 37.50, change: 1.1 },
+    { symbol: 'XOM', price: 110.40, change: 0.7 },
+    { symbol: 'COST', price: 740.20, change: -0.4 }
+];
