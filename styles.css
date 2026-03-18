@@ -108,8 +108,11 @@ body {
 
 .games-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
-    gap: 1.5rem;
+    grid-template-columns: 1fr;
+    gap: 2rem;
+    max-width: 1000px;
+    margin: 0 auto;
+    width: 100%;
     height: 100%;
     align-content: center;
     justify-content: center;
@@ -124,15 +127,15 @@ body {
 /* Game Card */
 .game-card {
     background-color: var(--card-bg);
-    border-radius: 12px;
-    padding: 1.25rem;
+    border-radius: 16px;
+    padding: 2rem;
     display: flex;
     flex-direction: column;
     justify-content: space-between;
-    box-shadow: 0 8px 16px rgba(0, 0, 0, 0.2);
-    border-top: 3px solid transparent;
+    box-shadow: 0 12px 24px rgba(0, 0, 0, 0.3);
+    border-top: 4px solid transparent;
     transition: transform 0.2s ease, border-color 0.3s ease;
-    min-height: 180px;
+    min-height: 250px;
 }
 
 .game-card.live {
@@ -147,8 +150,8 @@ body {
     display: flex;
     justify-content: space-between;
     align-items: center;
-    margin-bottom: 1.5rem;
-    font-size: 1rem;
+    margin-bottom: 2rem;
+    font-size: 1.5rem;
     font-weight: 600;
     color: var(--secondary-text);
     text-transform: uppercase;
@@ -182,12 +185,12 @@ body {
 .team-info {
     display: flex;
     align-items: center;
-    gap: 1rem;
+    gap: 1.5rem;
 }
 
 .team-logo {
-    width: 50px;
-    height: 50px;
+    width: 80px;
+    height: 80px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -200,7 +203,7 @@ body {
 
 .team-name {
     font-family: var(--font-heading);
-    font-size: 2rem;
+    font-size: 3.5rem;
     font-weight: 600;
     letter-spacing: 1px;
 }
@@ -219,11 +222,11 @@ body {
 /* Score */
 .team-score {
     font-family: var(--font-heading);
-    font-size: 3.5rem;
+    font-size: 6rem;
     font-weight: 700;
     line-height: 1;
     text-align: right;
-    width: 80px;
+    width: 140px;
     transition: color 0.3s ease, transform 0.3s ease;
 }
 
@@ -295,12 +298,16 @@ body {
 /* Responsive adjustments for generic portrait digital signage */
 @media (max-aspect-ratio: 1/1) {
     .header-center h1 {
-        font-size: 1.2rem;
-    }
-    .team-name {
         font-size: 1.5rem;
     }
-    .team-score {
+    .team-name {
         font-size: 2.5rem;
+    }
+    .team-score {
+        font-size: 4.5rem;
+    }
+    .team-logo {
+        width: 60px;
+        height: 60px;
     }
 }
