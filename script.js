@@ -23,11 +23,10 @@ function calculateItemsPerPage() {
     const gridHeight = grid.clientHeight;
 
     // Min card dimensions based on our CSS design
-    const cardMinWidth = 320;
-    const cardMinHeight = 200; // Increased to ensure no vertical clipping
+    const cardMinWidth = 400;
+    const cardMinHeight = 280; // Increased for larger fonts
 
-    let cols = Math.floor((gridWidth + gap) / (cardMinWidth + gap));
-    if (cols < 1) cols = 1;
+    let cols = 1; // Forced to 1 column as per requirements
 
     let rows = Math.floor((gridHeight + gap) / (cardMinHeight + gap));
     if (rows < 1) rows = 1;
@@ -322,63 +321,38 @@ function renderBoard() {
 }
 
 // Setup Ticker Tape
-const STOCKS = [
-    { symbol: 'AAPL', price: 173.50, change: 1.2 },
-    { symbol: 'MSFT', price: 420.55, change: 0.8 },
-    { symbol: 'GOOGL', price: 142.65, change: -0.5 },
-    { symbol: 'AMZN', price: 175.35, change: 2.1 },
-    { symbol: 'NVDA', price: 880.08, change: 3.5 },
-    { symbol: 'META', price: 505.40, change: 0.2 },
-    { symbol: 'TSLA', price: 175.22, change: -1.5 },
-    { symbol: 'BRK.B', price: 410.25, change: 0.1 },
-    { symbol: 'LLY', price: 775.00, change: 1.8 },
-    { symbol: 'V', price: 285.50, change: -0.3 },
-    { symbol: 'JPM', price: 195.20, change: 0.5 },
-    { symbol: 'WMT', price: 60.50, change: 0.4 },
-    { symbol: 'MA', price: 480.10, change: -0.2 },
-    { symbol: 'PG', price: 160.30, change: 0.1 },
-    { symbol: 'UNH', price: 490.50, change: -1.2 }
-];
+async function fetchLiveNews() {
+    try {
+        const response = await fetch('https://site.api.espn.com/apis/site/v2/sports/basketball/nba/news', {
+            cache: 'no-store'
+        });
 
-function simulateLiveStocks() {
-    // Randomly update some stocks
-    STOCKS.forEach(stock => {
-        if (Math.random() > 0.5) {
-            const volatility = 0.005; // 0.5% max change per tick
-            const changePercent = (Math.random() * volatility * 2) - volatility;
-            const priceChange = stock.price * changePercent;
+        if (!response.ok) throw new Error('Network response was not ok');
 
-            stock.price += priceChange;
-            stock.change += (changePercent * 100);
+        const data = await response.json();
+        if (data && data.articles && data.articles.length > 0) {
+            updateTicker(data.articles);
         }
-    });
-
-    updateTicker(STOCKS);
+    } catch (error) {
+        console.error('Error fetching live news:', error);
+    }
 }
 
-function updateTicker(stocks) {
+function updateTicker(articles) {
     const tickerContent = document.getElementById('ticker-content');
     if (!tickerContent) return;
 
-    // Format stock items
-    const stockItems = stocks.map(stock => {
-        const isPositive = stock.change >= 0;
-        const changeClass = isPositive ? 'positive-change' : 'negative-change';
-        const sign = isPositive ? '+' : '';
-        const priceStr = stock.price.toFixed(2);
-        const changeStr = stock.change.toFixed(2);
-
-        return `<span class="symbol">${stock.symbol}</span><span class="price">$${priceStr}</span><span class="${changeClass}">${sign}${changeStr}%</span>`;
-    });
+    // Extract headlines and format them
+    const news = articles.map(article => `<span>NBA NEWS:</span> ${article.headline}`);
 
     // Duplicate to ensure smooth infinite scrolling
-    const fullTicker = [...stockItems, ...stockItems, ...stockItems].join('     |     ');
-    tickerContent.innerHTML = `<span class="ticker-item">${fullTicker}     |     </span>`;
+    const fullNews = [...news, ...news, ...news].join('     |     ');
+    tickerContent.innerHTML = `<span class="ticker-item">${fullNews}     |     </span>`;
 }
 
 // Main Initialization
 function init() {
-    simulateLiveStocks(); // Initial render
+    fetchLiveNews();
 
     // Initial calculation of layout
     calculateItemsPerPage();
@@ -389,8 +363,8 @@ function init() {
     // Start Live Update polling loop
     updateTimer = setInterval(fetchLiveData, CONFIG.SCORE_UPDATE_INTERVAL);
 
-    // Start Stock simulation loop
-    setInterval(simulateLiveStocks, 3000);
+    // Start Live News polling loop (every 5 minutes)
+    setInterval(fetchLiveNews, 300000);
 
     // Start Pagination loop
     paginationTimer = setInterval(() => {
