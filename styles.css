@@ -6,7 +6,7 @@
 }
 
 :root {
-    --primary-color: #00b7af;
+    --primary-color: #d32f2f;
     --dark-bg: #10181f;
     --card-bg: #1a242d;
     --card-hover: #212c37;
@@ -91,9 +91,9 @@ body {
 }
 
 @keyframes pulse-animation {
-    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 183, 175, 0.7); }
-    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(0, 183, 175, 0); }
-    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(0, 183, 175, 0); }
+    0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0.7); }
+    70% { transform: scale(1); box-shadow: 0 0 0 10px rgba(211, 47, 47, 0); }
+    100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(211, 47, 47, 0); }
 }
 
 /* Main Scoreboard Grid */
@@ -280,26 +280,11 @@ body {
     font-size: 1.1rem;
     color: var(--light-text);
     white-space: pre;
-    font-family: var(--font-heading);
 }
 
-.ticker-item .symbol {
-    color: var(--primary-color);
+.ticker-item span {
+    color: var(--secondary-text);
     margin-right: 0.5rem;
-    font-weight: 600;
-}
-
-.ticker-item .price {
-    color: var(--light-text);
-    margin-right: 0.5rem;
-}
-
-.ticker-item .positive-change {
-    color: #00ff88;
-}
-
-.ticker-item .negative-change {
-    color: #ff3366;
 }
 
 @keyframes ticker {
